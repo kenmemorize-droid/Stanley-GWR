@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5116537956642384"
+     crossorigin="anonymous"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Airplane Tail Spotter — Airline Tail ID Speed Trainer</title>
+<style>
+  :root{
+    --bg:#0b0f1a; --panel:#121826; --accent:#3b82f6; --good:#22c55e; --warn:#f59e0b; --text:#e5e7eb; --muted:#9aa4b2;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+  .screen{flex:1;min-height:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+  .screen.active{display:flex;}
+  h1{font-size:clamp(22px,5vw,34px);margin:0 0 8px;}
+  p.sub{color:var(--muted);max-width:560px;line-height:1.5;margin:0 0 20px;}
+  .btn{background:var(--accent);color:white;border:none;border-radius:14px;padding:16px 32px;font-size:18px;font-weight:600;cursor:pointer;margin:6px;}
+  .btn.secondary{background:transparent;border:2px solid #2a3344;color:var(--text);}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn:active{transform:scale(0.97);}
+  .row{display:flex;flex-wrap:wrap;justify-content:center;}
+  a{color:#7db8ff;}
+
+  /* HUD during game */
+  #hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;z-index:5;pointer-events:none;}
+  .pill{background:rgba(18,24,38,0.85);backdrop-filter:blur(4px);border-radius:12px;padding:8px 14px;font-weight:700;font-size:15px;border:1px solid #232c3d;}
+  #timerPill{font-size:20px;min-width:74px;text-align:center;}
+  /* HUD labels */
+  .hudItem{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .hudLabel{font-size:9px;font-weight:700;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;}
+  #timerPill.low{color:#ef4444;}
+  #progressBar{position:absolute;top:0;left:0;height:4px;background:var(--accent);z-index:6;transition:width 0.1s linear;}
+
+  /* countdown */
+  #countdownNum{font-size:min(40vw,260px);font-weight:800;line-height:1;}
+
+  /* loading */
+  #loadingBar{width:min(80vw,360px);height:8px;background:#1c2433;border-radius:6px;overflow:hidden;margin-top:14px;}
+  #loadingFill{height:100%;width:0%;background:var(--accent);transition:width 0.15s linear;}
+
+  /* game screen — fixed-aspect photo frame, standardized across all aircraft */
+  #gameScreen{padding:0;}
+  #tailStage{position:relative;flex:1;width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
+  .photoFrame{position:relative;width:min(92vw,640px);height:min(68vh,520px);background:linear-gradient(180deg,#cfe3f7,#eef5fb);border-radius:18px;overflow:hidden;border:1px solid #232c3d;box-shadow:0 10px 40px rgba(0,0,0,0.4);}
+  .photoFrame img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+  #tapHint{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:var(--muted);font-size:13px;pointer-events:none;}
+
+  /* end screen */
+  #scoreBig{font-size:64px;font-weight:800;color:var(--good);margin:0;}
+  #resultsList{max-height:32vh;overflow-y:auto;width:min(92vw,560px);background:var(--panel);border-radius:14px;padding:10px 16px;margin:14px 0;text-align:left;font-size:14px;border:1px solid #232c3d;}
+  #resultsList div{padding:5px 0;border-bottom:1px solid #1c2433;display:flex;justify-content:space-between;color:var(--muted);}
+  #resultsList span.t{color:var(--text);}
+
+  /* study screen */
+  #studyScreen{align-items:stretch;justify-content:flex-start;padding:0;min-height:0;}
+  #studyGrid{flex:1;min-height:0;width:100%;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:16px;align-content:start;box-sizing:border-box;}
+  .studyCard{background:var(--panel);border-radius:10px;padding:8px;border:1px solid #232c3d;}
+  .studyCard .thumb{position:relative;width:100%;height:96px;border-radius:6px;overflow:hidden;background:linear-gradient(180deg,#cfe3f7,#eef5fb);}
+  .studyCard .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+  .studyCard .name{font-size:11px;color:var(--muted);text-align:center;margin-top:4px;line-height:1.2;}
+  .studyCard .source{display:block;font-size:10px;color:#7db8ff;text-align:center;margin-top:2px;text-decoration:underline;}
+  #studyHeader{padding:12px 16px;width:100%;display:flex;justify-content:space-between;align-items:center;}
+  #studyHeader h2{margin:0;font-size:16px;}
+
+  /* credits screen */
+  #creditsScreen{align-items:stretch;justify-content:flex-start;padding:0;min-height:0;}
+  #creditsHeader{padding:12px 16px;width:100%;display:flex;justify-content:space-between;align-items:center;}
+  #creditsHeader h2{margin:0;font-size:16px;}
+  #creditsList{flex:1;min-height:0;overflow-y:auto;width:100%;box-sizing:border-box;padding:0 18px 18px;text-align:left;font-size:13px;color:var(--muted);}
+  #creditsList p{line-height:1.5;}
+  #creditsList ol{padding-left:20px;}
+  #creditsList li{margin-bottom:4px;}
+  .linkBtn{background:none;border:none;color:#7db8ff;font-size:12px;text-decoration:underline;cursor:pointer;padding:0;}
+
+  /* ===================== ZEN MODE ===================== */
+  #zenScreen{flex-direction:row;padding:0;align-items:stretch;justify-content:flex-start;}
+  #zenLeft{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:14px;}
+  #zenHudTop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;z-index:5;pointer-events:none;}
+  #zenRight{width:268px;flex-shrink:0;background:var(--panel);display:flex;flex-direction:column;border-left:1px solid #232c3d;}
+  #zenRightHud{padding:10px 12px;border-bottom:1px solid #232c3d;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .zenStat{font-size:11px;color:var(--muted);}
+  .zenStat strong{display:block;font-size:16px;font-weight:700;color:var(--text);line-height:1.2;}
+  #zenLog{flex:1;overflow-y:auto;padding:6px 8px;}
+  #zenLog .zEntry{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:3px;font-size:12.5px;border-left:3px solid #333;}
+  #zenLog .zEntry.fast{border-color:#22c55e;background:rgba(34,197,94,0.08);}
+  #zenLog .zEntry.ok  {border-color:#f59e0b;background:rgba(245,158,11,0.08);}
+  #zenLog .zEntry.slow{border-color:#ef4444;background:rgba(239,68,68,0.08);}
+  #zenLog .zEntry .zn{flex:1;color:var(--text);line-height:1.2;}
+  #zenLog .zEntry .zt{color:var(--muted);font-size:11px;white-space:nowrap;}
+  #zenControls{padding:10px 12px;border-top:1px solid #232c3d;display:flex;gap:8px;}
+  #zenControls button{flex:1;padding:10px 6px;font-size:13px;border-radius:10px;border:none;cursor:pointer;font-weight:600;}
+  #endZenBtn{background:var(--accent);color:#fff;}
+  #zenAnalyticsBtn{background:transparent;border:1.5px solid #2a3344;color:var(--text);}
+  #zenTapHint{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:var(--muted);font-size:13px;pointer-events:none;}
+  @media(max-width:600px){
+    #zenScreen{flex-direction:column;}
+    #zenRight{width:100%;max-height:220px;border-left:none;border-top:1px solid #232c3d;}
+    #zenRightHud{grid-template-columns:repeat(4,1fr);}
+  }
+
+  /* ===================== ANALYTICS ===================== */
+  #analyticsScreen{align-items:stretch;justify-content:flex-start;padding:0;}
+  #analyticsHeader{padding:12px 16px;width:100%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #232c3d;flex-shrink:0;}
+  #analyticsHeader h2{margin:0;font-size:16px;}
+  #analyticsContent{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;}
+  .aSection{background:var(--panel);border-radius:14px;padding:14px 16px;border:1px solid #232c3d;}
+  .aSection h3{margin:0 0 12px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;}
+  #readinessScore{font-size:52px;font-weight:800;margin:0 0 6px;line-height:1;}
+  #readinessBar{height:10px;background:#1c2433;border-radius:8px;overflow:hidden;margin-bottom:8px;}
+  #readinessFill{height:100%;border-radius:8px;}
+  #readinessLabel{font-size:13px;color:var(--muted);line-height:1.6;}
+  .barChart{display:flex;flex-direction:column;gap:7px;}
+  .barRow{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .barRow .bLabel{width:150px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+  .barRow .bTrack{flex:1;height:14px;background:#1c2433;border-radius:4px;overflow:hidden;}
+  .barRow .bFill{height:100%;border-radius:4px;}
+  .barRow .bVal{width:44px;text-align:right;color:var(--muted);flex-shrink:0;}
+  .histWrap{display:flex;flex-direction:column;align-items:center;flex:1;}
+  .histBar{width:80%;border-radius:3px 3px 0 0;min-height:2px;}
+  .histLabel{font-size:10px;color:var(--muted);text-align:center;margin-top:3px;line-height:1.3;}
+  .histCount{font-size:11px;color:var(--text);font-weight:600;}
+  #histContainer{display:flex;align-items:flex-end;height:90px;gap:4px;padding-bottom:0;}
+  .sessionRow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1c2433;font-size:12px;color:var(--muted);gap:8px;}
+  .sessionRow:last-child{border-bottom:none;}
+  .sessionRow .sDate{flex:1;}
+  .sessionRow .sPace{font-weight:700;}
+  #noDataMsg{text-align:center;color:var(--muted);padding:60px 20px;line-height:1.8;}
+  #clearDataBtn{background:none;border:1px solid #333;color:var(--muted);font-size:11px;border-radius:8px;padding:6px 12px;cursor:pointer;margin-top:8px;}
+  #clearDataBtn:hover{border-color:#ef4444;color:#ef4444;}
+  .slowScroll{max-height:340px;overflow-y:auto;}
+  .anaPageRow{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px;color:var(--muted);}
+  .anaPageBtn{background:transparent;border:1.5px solid #2a3344;color:var(--text);font-size:12px;border-radius:8px;padding:5px 12px;cursor:pointer;}
+  .anaPageBtn:disabled{opacity:0.35;cursor:not-allowed;}
+  /* Confirmation modal */
+  #confirmOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;}
+  #confirmOverlay.open{display:flex;}
+  #confirmBox{background:#1a2236;border:1px solid #2a3344;border-radius:18px;padding:28px 28px 20px;max-width:340px;width:90%;text-align:center;}
+  #confirmBox h3{margin:0 0 10px;font-size:17px;color:var(--text);}
+  #confirmBox p{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 20px;}
+  #confirmBox .cbRow{display:flex;gap:10px;justify-content:center;}
+  #confirmCancelBtn{padding:10px 22px;border-radius:10px;border:1.5px solid #2a3344;background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;}
+  #confirmOkBtn{padding:10px 22px;border-radius:10px;border:none;background:#dc2626;color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- START -->
+  <div class="screen active" id="startScreen">
+    <h1>Airplane Tail Spotter</h1>
+    <p class="sub">Speed-identify 120 airlines from real aircraft photos by their airplane tail. 3‑2‑1 countdown, then 60 seconds. Tap the photo to advance — say the airline name out loud as you go. Each tail appears once per session.</p>
+    <div class="row">
+      <button class="btn" id="startBtn" disabled>Loading photos…</button>
+      <button class="btn secondary" id="studyBtn">Study All Designs</button>
+      <button class="btn secondary" id="zenBtn">Zen Mode</button>
+    </div>
+    <div id="loadingBar"><div id="loadingFill"></div></div>
+    <p class="sub" id="bankCount" style="margin-top:18px;font-size:12px;"></p>
+    <button class="linkBtn" id="creditsBtn">Photo credits &amp; sources</button>
+    &nbsp;·&nbsp;
+    <button class="linkBtn" id="analyticsHomeBtn">View Analytics</button>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div class="screen" id="countdownScreen">
+    <div id="countdownNum">3</div>
+    <p class="sub">Get ready…</p>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="gameScreen">
+    <div id="progressBar" style="width:100%"></div>
+    <div id="hud">
+      <div class="hudItem">
+        <div class="hudLabel">Score</div>
+        <div class="pill" id="counterPill">0</div>
+      </div>
+      <div class="hudItem">
+        <div class="hudLabel">Time</div>
+        <div class="pill" id="timerPill">60</div>
+      </div>
+    </div>
+    <div id="tailStage">
+      <div class="photoFrame" id="photoFrame"></div>
+      <div id="tapHint">tap anywhere to advance</div>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div class="screen" id="endScreen">
+    <h1>Time's up!</h1>
+    <p id="scoreBig">0</p>
+    <p class="sub">designs advanced through in 60 seconds</p>
+    <div id="resultsList"></div>
+    <div class="row">
+      <button class="btn" id="copyBtn">Copy Result Log</button>
+      <button class="btn secondary" id="restartBtn">Try Again</button>
+    </div>
+  </div>
+
+  <!-- STUDY -->
+  <div class="screen" id="studyScreen">
+    <div id="studyHeader">
+      <h2>Study Bank</h2>
+      <button class="btn secondary" id="closeStudyBtn">Close</button>
+    </div>
+    <div id="studyGrid"></div>
+  </div>
+
+  <!-- ZEN MODE -->
+  <div class="screen" id="zenScreen">
+    <div id="zenLeft">
+      <div id="zenHudTop">
+        <div class="hudItem">
+          <div class="hudLabel">Count</div>
+          <div class="pill" id="zenCountPill">0</div>
+        </div>
+        <div class="hudItem">
+          <div class="hudLabel">Elapsed</div>
+          <div class="pill" id="zenTimerPill">0:00</div>
+        </div>
+      </div>
+      <div class="photoFrame" id="zenFrame"></div>
+      <div id="zenTapHint">tap anywhere to advance · tail revealed in log</div>
+    </div>
+    <div id="zenRight">
+      <div id="zenRightHud">
+        <div class="zenStat"><strong id="zenAvgStat">—</strong>Avg per tail</div>
+        <div class="zenStat"><strong id="zenPaceStat">—</strong>/ min pace</div>
+        <div class="zenStat"><strong id="zenBestStat">—</strong>Best time</div>
+        <div class="zenStat"><strong id="zenTargetStat">80/min</strong>Target</div>
+      </div>
+      <div id="zenLog"></div>
+      <div id="zenControls">
+        <button id="endZenBtn">End Session</button>
+        <button id="zenAnalyticsBtn">Analytics</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="screen" id="analyticsScreen">
+    <div id="analyticsHeader">
+      <h2>Analytics</h2>
+      <button class="btn secondary" id="closeAnalyticsBtn" style="padding:8px 16px;font-size:13px;">Back</button>
+    </div>
+    <div id="analyticsContent">
+      <div id="noDataMsg">No Zen Mode sessions yet.<br>Practice in Zen Mode to build your analytics.</div>
+    </div>
+  </div>
+
+  <!-- CREDITS -->
+  <div class="screen" id="creditsScreen">
+    <div id="creditsHeader">
+      <h2>Photo Credits</h2>
+      <button class="btn secondary" id="closeCreditsBtn">Close</button>
+    </div>
+    <div id="creditsList">
+      <p>120 airplane tail photos sourced from Wikimedia Commons via each airline's Wikipedia article (freely licensed; used for non-commercial, educational, Guinness World Record attempt purposes). Click an airline name to open its Wikipedia source page for photographer and license details.</p>
+      <ol id="creditsOl"></ol>
+    </div>
+  </div>
+
+  <!-- CONFIRMATION MODAL -->
+  <div id="confirmOverlay">
+    <div id="confirmBox">
+      <h3>Clear All Analytics Data?</h3>
+      <p>This will permanently delete all your practice history and session records.<br>This cannot be undone.</p>
+      <div class="cbRow">
+        <button id="confirmCancelBtn">Cancel</button>
+        <button id="confirmOkBtn">Clear All Data</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   AIRLINE PHOTO DATA — 120 airlines
+   Each entry: [Airline Name, photo URL (Wikimedia Commons, 960px wide),
+   Wikipedia source page URL for attribution]
+   ========================================================================= */
+const PHOTOS = [
+["American Airlines","tail_images/American_Airlines.png","https://en.wikipedia.org/wiki/American_Airlines"],
+["Delta Air Lines","tail_images/Delta_Air_Lines.png","https://en.wikipedia.org/wiki/Delta_Air_Lines"],
+["United Airlines","tail_images/United_Airlines.png","https://en.wikipedia.org/wiki/United_Airlines"],
+["Southwest Airlines","tail_images/Southwest_Airlines.png","https://en.wikipedia.org/wiki/Southwest_Airlines"],
+["JetBlue Airways","tail_images/JetBlue_Airways.png","https://en.wikipedia.org/wiki/JetBlue"],
+["Alaska Airlines","tail_images/Alaska_Airlines.png","https://en.wikipedia.org/wiki/Alaska_Airlines"],
+["Hawaiian Airlines","tail_images/Hawaiian_Airlines.png","https://en.wikipedia.org/wiki/Hawaiian_Airlines"],
+["Spirit Airlines","tail_images/Spirit_Airlines.png","https://en.wikipedia.org/wiki/Spirit_Airlines"],
+["Frontier Airlines","tail_images/Frontier_Airlines.png","https://en.wikipedia.org/wiki/Frontier_Airlines"],
+["Air Canada","tail_images/Air_Canada.png","https://en.wikipedia.org/wiki/Air_Canada"],
+["WestJet","tail_images/WestJet.png","https://en.wikipedia.org/wiki/WestJet"],
+["Allegiant Air","tail_images/Allegiant_Air.png","https://en.wikipedia.org/wiki/Allegiant_Air"],
+["Porter Airlines","tail_images/Porter_Airlines.png","https://en.wikipedia.org/wiki/Porter_Airlines"],
+["Volaris","tail_images/Volaris.png","https://en.wikipedia.org/wiki/Volaris"],
+["Aeromexico","tail_images/Aeromexico.png","https://en.wikipedia.org/wiki/Aerom%C3%A9xico"],
+["Copa Airlines","tail_images/Copa_Airlines.png","https://en.wikipedia.org/wiki/Copa_Airlines"],
+["Avianca","tail_images/Avianca.png","https://en.wikipedia.org/wiki/Avianca"],
+["LATAM Airlines","tail_images/LATAM_Airlines.png","https://en.wikipedia.org/wiki/LATAM_Airlines"],
+["British Airways","tail_images/British_Airways.png","https://en.wikipedia.org/wiki/British_Airways"],
+["Lufthansa","tail_images/Lufthansa.png","https://en.wikipedia.org/wiki/Lufthansa"],
+["Air France","tail_images/Air_France.png","https://en.wikipedia.org/wiki/Air_France"],
+["KLM","tail_images/KLM.png","https://en.wikipedia.org/wiki/KLM"],
+["Iberia","tail_images/Iberia.png","https://en.wikipedia.org/wiki/Iberia_(airline)"],
+["Austrian Airlines","tail_images/Austrian_Airlines.png","https://en.wikipedia.org/wiki/Austrian_Airlines"],
+["Finnair","tail_images/Finnair.png","https://en.wikipedia.org/wiki/Finnair"],
+["Ryanair","tail_images/Ryanair.png","https://en.wikipedia.org/wiki/Ryanair"],
+["easyJet","tail_images/easyJet.png","https://en.wikipedia.org/wiki/EasyJet"],
+["Wizz Air","tail_images/Wizz_Air.png","https://en.wikipedia.org/wiki/Wizz_Air"],
+["Vueling","tail_images/Vueling.png","https://en.wikipedia.org/wiki/Vueling"],
+["LOT Polish Airlines","tail_images/LOT_Polish_Airlines.png","https://en.wikipedia.org/wiki/LOT_Polish_Airlines"],
+["Aeroflot","tail_images/Aeroflot.png","https://en.wikipedia.org/wiki/Aeroflot"],
+["Turkish Airlines","tail_images/Turkish_Airlines.png","https://en.wikipedia.org/wiki/Turkish_Airlines"],
+["Pegasus Airlines","tail_images/Pegasus_Airlines.png","https://en.wikipedia.org/wiki/Pegasus_Airlines"],
+["Condor","tail_images/Condor.png","https://en.wikipedia.org/wiki/Condor_(airline)"],
+["Eurowings","tail_images/Eurowings.png","https://en.wikipedia.org/wiki/Eurowings"],
+["Brussels Airlines","tail_images/Brussels_Airlines.png","https://en.wikipedia.org/wiki/Brussels_Airlines"],
+["Icelandair","tail_images/Icelandair.png","https://en.wikipedia.org/wiki/Icelandair"],
+["Air Baltic","tail_images/Air_Baltic.png","https://en.wikipedia.org/wiki/AirBaltic"],
+["Croatia Airlines","tail_images/Croatia_Airlines.png","https://en.wikipedia.org/wiki/Croatia_Airlines"],
+["Aegean Airlines","tail_images/Aegean_Airlines.png","https://en.wikipedia.org/wiki/Aegean_Airlines"],
+["Czech Airlines","tail_images/Czech_Airlines.png","https://en.wikipedia.org/wiki/Czech_Airlines"],
+["Air Serbia","tail_images/Air_Serbia.png","https://en.wikipedia.org/wiki/Air_Serbia"],
+["Royal Jordanian","tail_images/Royal_Jordanian.png","https://en.wikipedia.org/wiki/Royal_Jordanian"],
+["SunExpress","tail_images/SunExpress.png","https://en.wikipedia.org/wiki/SunExpress"],
+["Transavia","tail_images/Transavia.png","https://en.wikipedia.org/wiki/Transavia"],
+["Loganair","tail_images/Loganair.png","https://en.wikipedia.org/wiki/Loganair"],
+["Virgin Atlantic","tail_images/Virgin_Atlantic.png","https://en.wikipedia.org/wiki/Virgin_Atlantic"],
+["TAROM","tail_images/TAROM.png","https://en.wikipedia.org/wiki/TAROM"],
+["Qatar Airways","tail_images/Qatar_Airways.png","https://en.wikipedia.org/wiki/Qatar_Airways"],
+["Etihad Airways","tail_images/Etihad_Airways.png","https://en.wikipedia.org/wiki/Etihad_Airways"],
+["Oman Air","tail_images/Oman_Air.png","https://en.wikipedia.org/wiki/Oman_Air"],
+["Gulf Air","tail_images/Gulf_Air.png","https://en.wikipedia.org/wiki/Gulf_Air"],
+["Emirates","tail_images/Emirates.png","https://en.wikipedia.org/wiki/Emirates_(airline)"],
+["Kuwait Airways","tail_images/Kuwait_Airways.png","https://en.wikipedia.org/wiki/Kuwait_Airways"],
+["Royal Air Maroc","tail_images/Royal_Air_Maroc.png","https://en.wikipedia.org/wiki/Royal_Air_Maroc"],
+["EgyptAir","tail_images/EgyptAir.png","https://en.wikipedia.org/wiki/EgyptAir"],
+["Middle East Airlines","tail_images/Middle_East_Airlines.png","https://en.wikipedia.org/wiki/Middle_East_Airlines"],
+["Iran Air","tail_images/Iran_Air.png","https://en.wikipedia.org/wiki/Iran_Air"],
+["flydubai","tail_images/flydubai.png","https://en.wikipedia.org/wiki/Flydubai"],
+["Air Arabia","tail_images/Air_Arabia.png","https://en.wikipedia.org/wiki/Air_Arabia"],
+["South African Airways","tail_images/South_African_Airways.png","https://en.wikipedia.org/wiki/South_African_Airways"],
+["Kenya Airways","tail_images/Kenya_Airways.png","https://en.wikipedia.org/wiki/Kenya_Airways"],
+["RwandAir","tail_images/RwandAir.png","https://en.wikipedia.org/wiki/RwandAir"],
+["Air Tanzania","tail_images/Air_Tanzania.png","https://en.wikipedia.org/wiki/Air_Tanzania"],
+["Air Peace","tail_images/Air_Peace.png","https://en.wikipedia.org/wiki/Air_Peace"],
+["Singapore Airlines","tail_images/Singapore_Airlines.png","https://en.wikipedia.org/wiki/Singapore_Airlines"],
+["Cathay Pacific","tail_images/Cathay_Pacific.png","https://en.wikipedia.org/wiki/Cathay_Pacific"],
+["Japan Airlines","tail_images/Japan_Airlines.png","https://en.wikipedia.org/wiki/Japan_Airlines"],
+["All Nippon Airways","tail_images/All_Nippon_Airways.png","https://en.wikipedia.org/wiki/All_Nippon_Airways"],
+["Korean Air","tail_images/Korean_Air.png","https://en.wikipedia.org/wiki/Korean_Air"],
+["Asiana Airlines","tail_images/Asiana_Airlines.png","https://en.wikipedia.org/wiki/Asiana_Airlines"],
+["China Airlines","tail_images/China_Airlines.png","https://en.wikipedia.org/wiki/China_Airlines"],
+["EVA Air","tail_images/EVA_Air.png","https://en.wikipedia.org/wiki/EVA_Air"],
+["Thai Airways","tail_images/Thai_Airways.png","https://en.wikipedia.org/wiki/Thai_Airways_International"],
+["Malaysia Airlines","tail_images/Malaysia_Airlines.png","https://en.wikipedia.org/wiki/Malaysia_Airlines"],
+["Garuda Indonesia","tail_images/Garuda_Indonesia.png","https://en.wikipedia.org/wiki/Garuda_Indonesia"],
+["Philippine Airlines","tail_images/Philippine_Airlines.png","https://en.wikipedia.org/wiki/Philippine_Airlines"],
+["Vietnam Airlines","tail_images/Vietnam_Airlines.png","https://en.wikipedia.org/wiki/Vietnam_Airlines"],
+["AirAsia","tail_images/AirAsia.png","https://en.wikipedia.org/wiki/AirAsia"],
+["Scoot","tail_images/Scoot.png","https://en.wikipedia.org/wiki/Scoot"],
+["Jetstar","tail_images/Jetstar.png","https://en.wikipedia.org/wiki/Jetstar_Airways"],
+["Cebu Pacific","tail_images/Cebu_Pacific.png","https://en.wikipedia.org/wiki/Cebu_Pacific"],
+["Lion Air","tail_images/Lion_Air.png","https://en.wikipedia.org/wiki/Lion_Air"],
+["Batik Air","tail_images/Batik_Air.png","https://en.wikipedia.org/wiki/Batik_Air"],
+["VietJet Air","tail_images/VietJet_Air.png","https://en.wikipedia.org/wiki/VietJet_Air"],
+["Bangkok Airways","tail_images/Bangkok_Airways.png","https://en.wikipedia.org/wiki/Bangkok_Airways"],
+["Nok Air","tail_images/Nok_Air.png","https://en.wikipedia.org/wiki/Nok_Air"],
+["IndiGo","tail_images/IndiGo.png","https://en.wikipedia.org/wiki/IndiGo"],
+["Air India","tail_images/Air_India.png","https://en.wikipedia.org/wiki/Air_India"],
+["SpiceJet","tail_images/SpiceJet.png","https://en.wikipedia.org/wiki/SpiceJet"],
+["Air India Express","tail_images/Air_India_Express.png","https://en.wikipedia.org/wiki/Air_India_Express"],
+["Akasa Air","tail_images/Akasa_Air.png","https://en.wikipedia.org/wiki/Akasa_Air"],
+["Qantas","tail_images/Qantas.png","https://en.wikipedia.org/wiki/Qantas"],
+["Air New Zealand","tail_images/Air_New_Zealand.png","https://en.wikipedia.org/wiki/Air_New_Zealand"],
+["Fiji Airways","tail_images/Fiji_Airways.png","https://en.wikipedia.org/wiki/Fiji_Airways"],
+["Air Niugini","tail_images/Air_Niugini.png","https://en.wikipedia.org/wiki/Air_Niugini"],
+["Solomon Airlines","tail_images/Solomon_Airlines.png","https://en.wikipedia.org/wiki/Solomon_Airlines"],
+["Air China","tail_images/Air_China.png","https://en.wikipedia.org/wiki/Air_China"],
+["Hainan Airlines","tail_images/Hainan_Airlines.png","https://en.wikipedia.org/wiki/Hainan_Airlines"],
+["Xiamen Airlines","tail_images/Xiamen_Airlines.png","https://en.wikipedia.org/wiki/XiamenAir"],
+["Shenzhen Airlines","tail_images/Shenzhen_Airlines.png","https://en.wikipedia.org/wiki/Shenzhen_Airlines"],
+["Shandong Airlines","tail_images/Shandong_Airlines.png","https://en.wikipedia.org/wiki/Shandong_Airlines"],
+["Sichuan Airlines","tail_images/Sichuan_Airlines.png","https://en.wikipedia.org/wiki/Sichuan_Airlines"],
+["Spring Airlines","tail_images/Spring_Airlines.png","https://en.wikipedia.org/wiki/Spring_Airlines"],
+["Juneyao Airlines","tail_images/Juneyao_Airlines.png","https://en.wikipedia.org/wiki/Juneyao_Air"],
+["SriLankan Airlines","tail_images/SriLankan_Airlines.png","https://en.wikipedia.org/wiki/SriLankan_Airlines"],
+["Nepal Airlines","tail_images/Nepal_Airlines.png","https://en.wikipedia.org/wiki/Nepal_Airlines"],
+["Druk Air","tail_images/Druk_Air.png","https://en.wikipedia.org/wiki/Drukair"],
+["Air Astana","tail_images/Air_Astana.png","https://en.wikipedia.org/wiki/Air_Astana"],
+["Cayman Airways","tail_images/Cayman_Airways.png","https://en.wikipedia.org/wiki/Cayman_Airways"],
+["Surinam Airways","tail_images/Surinam_Airways.png","https://en.wikipedia.org/wiki/Surinam_Airways"],
+["Sky Airline","tail_images/Sky_Airline.png","https://en.wikipedia.org/wiki/Sky_Airline"],
+["Wingo","tail_images/Wingo.png","https://en.wikipedia.org/wiki/Wingo_(airline)"],
+["Viva Aerobus","tail_images/Viva_Aerobus.png","https://en.wikipedia.org/wiki/Viva_Aerobus"],
+["Bulgaria Air","tail_images/Bulgaria_Air.png","https://en.wikipedia.org/wiki/Bulgaria_Air"],
+["Air Moldova","tail_images/Air_Moldova.png","https://en.wikipedia.org/wiki/Air_Moldova"],
+["Belavia","tail_images/Belavia.png","https://en.wikipedia.org/wiki/Belavia"],
+["Tunisair","tail_images/Tunisair.png","https://en.wikipedia.org/wiki/Tunisair"],
+["Libyan Airlines","tail_images/Libyan_Airlines.png","https://en.wikipedia.org/wiki/Libyan_Airlines"],
+["Sudan Airways","tail_images/Sudan_Airways.png","https://en.wikipedia.org/wiki/Sudan_Airways"]
+];
+
+/* =========================================================================
+   PRELOADER — fetch every photo into the browser cache before the attempt
+   so there is zero load lag once the 60-second timer starts.
+   ========================================================================= */
+const loadedImgs = new Array(PHOTOS.length).fill(false);
+let loadedCount = 0;
+
+function preloadAll(){
+  PHOTOS.forEach((entry, i)=>{
+    const img = new Image();
+    img.onload = ()=> markLoaded(i);
+    img.onerror = ()=> markLoaded(i); // don't block the attempt on one bad URL
+    img.src = entry[1];
+  });
+}
+
+function markLoaded(i){
+  if(loadedImgs[i]) return;
+  loadedImgs[i] = true;
+  loadedCount++;
+  const pct = Math.round((loadedCount/PHOTOS.length)*100);
+  document.getElementById("loadingFill").style.width = pct+"%";
+  if(loadedCount >= PHOTOS.length){
+    const btn = document.getElementById("startBtn");
+    btn.disabled = false;
+    btn.textContent = "Start Attempt";
+    document.getElementById("loadingBar").style.display = "none";
+  }
+}
+
+/* =========================================================================
+   APP LOGIC
+   ========================================================================= */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+let queue = [], qPtr = 0, currentIdx = 0, counter = 0, timeLeft = 60, gameTimer = null;
+let shownLog = [], gameActive = false;
+
+function initQueue(){ queue = shuffle([...Array(PHOTOS.length).keys()]); qPtr = 0; }
+
+function nextIdx(){
+  if(qPtr >= queue.length){
+    const last = queue[queue.length-1];
+    let resh = shuffle([...Array(PHOTOS.length).keys()]);
+    if(resh[0] === last && resh.length > 1){ [resh[0],resh[1]] = [resh[1],resh[0]]; }
+    queue = resh; qPtr = 0;
+  }
+  const idx = queue[qPtr]; qPtr++; return idx;
+}
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function photoMarkup(entry){
+  const [name, url] = entry;
+  return `<img src="${url}" alt="${name}" draggable="false">`;
+}
+
+function renderCurrent(){
+  document.getElementById("photoFrame").innerHTML = photoMarkup(PHOTOS[currentIdx]);
+}
+
+function updateHud(){
+  document.getElementById("counterPill").textContent = counter;
+  const t = Math.max(0, Math.ceil(timeLeft));
+  const pill = document.getElementById("timerPill");
+  pill.textContent = t;
+  pill.classList.toggle("low", t<=10);
+  document.getElementById("progressBar").style.width = (Math.max(0,timeLeft)/60*100)+"%";
+}
+
+function runCountdown(){
+  showScreen("countdownScreen");
+  let n = 3;
+  const numEl = document.getElementById("countdownNum");
+  numEl.textContent = n;
+  const iv = setInterval(()=>{
+    n--;
+    if(n>0){ numEl.textContent = n; }
+    else { clearInterval(iv); startGame(); }
+  }, 800);
+}
+
+function startGame(){
+  initQueue();
+  counter = 0; timeLeft = 60; shownLog = []; gameActive = true;
+  currentIdx = nextIdx();
+  renderCurrent();
+  updateHud();
+  showScreen("gameScreen");
+  const startTime = performance.now();
+  gameTimer = setInterval(()=>{
+    timeLeft = 60 - (performance.now()-startTime)/1000;
+    if(timeLeft <= 0){ timeLeft = 0; updateHud(); endGame(); }
+    else { updateHud(); }
+  }, 100);
+}
+
+function handleTap(){
+  if(!gameActive || timeLeft<=0) return;
+  const elapsed = (60-timeLeft).toFixed(1);
+  shownLog.push({order: counter+1, name: PHOTOS[currentIdx][0], t: elapsed});
+  counter++;
+  currentIdx = nextIdx();
+  renderCurrent();
+  updateHud();
+}
+
+function endGame(){
+  gameActive = false;
+  clearInterval(gameTimer);
+  document.getElementById("scoreBig").textContent = counter;
+  const list = document.getElementById("resultsList");
+  list.innerHTML = shownLog.map(r=>`<div>#${r.order} <span class="t">${r.name}</span> <span>${r.t}s</span></div>`).join("");
+  showScreen("endScreen");
+}
+
+function buildStudyGrid(){
+  const grid = document.getElementById("studyGrid");
+  const sorted = PHOTOS.map((e,i)=>({e,i})).sort((a,b)=>a.e[0].localeCompare(b.e[0]));
+  grid.innerHTML = sorted.map(({e})=>`<div class="studyCard"><div class="thumb"><img src="${e[1]}" alt="${e[0]}" loading="lazy"></div><div class="name">${e[0]}</div><a class="source" href="${e[2]}" target="_blank" rel="noopener">source ↗</a></div>`).join("");
+}
+
+function buildCreditsList(){
+  const ol = document.getElementById("creditsOl");
+  const sorted = PHOTOS.map((e,i)=>({e,i})).sort((a,b)=>a.e[0].localeCompare(b.e[0]));
+  ol.innerHTML = sorted.map(({e})=>`<li><a href="${e[2]}" target="_blank" rel="noopener">${e[0]}</a></li>`).join("");
+}
+
+document.getElementById("startBtn").addEventListener("click", runCountdown);
+document.getElementById("studyBtn").addEventListener("click", ()=>{ buildStudyGrid(); showScreen("studyScreen"); });
+document.getElementById("closeStudyBtn").addEventListener("click", ()=> showScreen("startScreen"));
+document.getElementById("creditsBtn").addEventListener("click", ()=>{ buildCreditsList(); showScreen("creditsScreen"); });
+document.getElementById("closeCreditsBtn").addEventListener("click", ()=> showScreen("startScreen"));
+document.getElementById("tailStage").addEventListener("click", handleTap);
+document.getElementById("restartBtn").addEventListener("click", ()=> showScreen("startScreen"));
+document.getElementById("copyBtn").addEventListener("click", ()=>{
+  const text = "Airplane Tail Spotter result: "+counter+" identified in 60s\n" + shownLog.map(r=>`#${r.order}\t${r.t}s\t${r.name}`).join("\n");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{ alert("Result log copied."); }).catch(()=>{ prompt("Copy manually:", text); });
+  } else { prompt("Copy manually:", text); }
+});
+
+document.getElementById("bankCount").textContent = PHOTOS.length + " airplane tail designs in the study bank.";
+preloadAll();
+
+/* =========================================================================
+   ZEN MODE
+   ========================================================================= */
+const ZEN_KEY = 'ats_zen_v1';
+
+function zenLoad(){ try{ return JSON.parse(localStorage.getItem(ZEN_KEY))||{sessions:[]}; }catch(e){ return {sessions:[]}; } }
+function zenSave(d){ try{ localStorage.setItem(ZEN_KEY,JSON.stringify(d)); }catch(e){} }
+
+let zenQueue=[], zenPtr=0, zenCurrentIdx=0, zenCount=0;
+let zenSessionStart=0, zenImgStart=0, zenSessionEntries=[], zenTimer=null, zenActive=false;
+
+function zenInitQueue(){
+  zenQueue=shuffle([...Array(PHOTOS.length).keys()]); zenPtr=0;
+}
+function zenNextIdx(){
+  if(zenPtr>=zenQueue.length){
+    const last=zenQueue[zenQueue.length-1];
+    let r=shuffle([...Array(PHOTOS.length).keys()]);
+    if(r[0]===last&&r.length>1){[r[0],r[1]]=[r[1],r[0]];}
+    zenQueue=r; zenPtr=0;
+  }
+  return zenQueue[zenPtr++];
+}
+
+function startZen(){
+  zenInitQueue();
+  zenCount=0; zenSessionEntries=[]; zenActive=true;
+  zenCurrentIdx=zenNextIdx();
+  document.getElementById('zenFrame').innerHTML=photoMarkup(PHOTOS[zenCurrentIdx]);
+  document.getElementById('zenLog').innerHTML='';
+  zenSessionStart=performance.now();
+  zenImgStart=zenSessionStart;
+  zenUpdateHud();
+  showScreen('zenScreen');
+  clearInterval(zenTimer);
+  zenTimer=setInterval(zenUpdateHud,500);
+}
+
+function zenFmtTime(ms){ const t=ms/1000; return t<60?t.toFixed(2)+'s':(Math.floor(t/60)+':'+(t%60).toFixed(0).padStart(2,'0')); }
+
+function zenUpdateHud(){
+  const elapsed=(performance.now()-zenSessionStart)/1000;
+  const mins=Math.floor(elapsed/60);
+  const secs=Math.floor(elapsed%60);
+  document.getElementById('zenTimerPill').textContent=mins+':'+(secs+'').padStart(2,'0');
+  document.getElementById('zenCountPill').textContent=zenCount;
+  if(zenCount>0){
+    const avgMs=zenSessionEntries.reduce((s,e)=>s+e.ms,0)/zenSessionEntries.length;
+    const bestMs=Math.min(...zenSessionEntries.map(e=>e.ms));
+    document.getElementById('zenAvgStat').textContent=(avgMs/1000).toFixed(2)+'s';
+    document.getElementById('zenPaceStat').textContent=Math.round(60000/avgMs);
+    document.getElementById('zenBestStat').textContent=(bestMs/1000).toFixed(2)+'s';
+  }
+}
+
+function zenHandleTap(){
+  if(!zenActive) return;
+  const now=performance.now();
+  const ms=Math.round(now-zenImgStart);
+  const entry={name:PHOTOS[zenCurrentIdx][0], ms};
+  zenSessionEntries.push(entry);
+  zenCount++;
+  // Add log entry — newest at top
+  const s=(ms/1000).toFixed(2);
+  const cls=ms<750?'fast':ms<1500?'ok':'slow';
+  const log=document.getElementById('zenLog');
+  const div=document.createElement('div');
+  div.className='zEntry '+cls;
+  div.innerHTML=`<span class="zn">${zenCount}. ${entry.name}</span><span class="zt">${s}s</span>`;
+  log.insertBefore(div,log.firstChild);
+  // Advance
+  zenCurrentIdx=zenNextIdx();
+  document.getElementById('zenFrame').innerHTML=photoMarkup(PHOTOS[zenCurrentIdx]);
+  zenImgStart=performance.now();
+  zenUpdateHud();
+}
+
+function endZen(goTo){
+  if(!zenActive&&zenSessionEntries.length===0){ showScreen(goTo||'startScreen'); return; }
+  zenActive=false;
+  clearInterval(zenTimer);
+  if(zenSessionEntries.length>0){
+    const d=zenLoad();
+    d.sessions.push({date:new Date().toISOString(), entries:zenSessionEntries});
+    if(d.sessions.length>100) d.sessions=d.sessions.slice(-100);
+    zenSave(d);
+  }
+  if(goTo==='analyticsScreen'){ showAnalytics(); }
+  else { showScreen('startScreen'); }
+}
+
+document.getElementById('zenLeft').addEventListener('click', zenHandleTap);
+document.getElementById('zenBtn').addEventListener('click', startZen);
+document.getElementById('endZenBtn').addEventListener('click', ()=>endZen('startScreen'));
+document.getElementById('zenAnalyticsBtn').addEventListener('click', ()=>endZen('analyticsScreen'));
+
+/* =========================================================================
+   ANALYTICS
+   ========================================================================= */
+let analyticsFrom='startScreen';
+
+function showAnalytics(from){
+  if(from) analyticsFrom=from;
+  buildAnalytics();
+  showScreen('analyticsScreen');
+}
+
+let anaSessions=[], anaPage=1;
+const ANA_PER=15;
+
+function buildAnalytics(){
+  const d=zenLoad();
+  const content=document.getElementById('analyticsContent');
+  if(!d.sessions||d.sessions.length===0){
+    content.innerHTML='<div id="noDataMsg">No Zen Mode sessions yet.<br>Practice in Zen Mode to build your analytics.</div>';
+    return;
+  }
+
+  // Store sessions latest-first for pagination
+  anaSessions=d.sessions.slice().reverse();
+  anaPage=1;
+
+  const allEntries=d.sessions.flatMap(s=>s.entries);
+  const byAirline={};
+  allEntries.forEach(e=>{
+    if(!byAirline[e.name]) byAirline[e.name]={times:[]};
+    byAirline[e.name].times.push(e.ms);
+  });
+  const airlineStats=Object.entries(byAirline).map(([name,v])=>({
+    name, avg:v.times.reduce((a,t)=>a+t,0)/v.times.length, count:v.times.length
+  })).sort((a,b)=>b.avg-a.avg);
+
+  const overallAvg=allEntries.reduce((s,e)=>s+e.ms,0)/allEntries.length;
+  const overallPace=Math.round(60000/overallAvg);
+  const readinessPct=Math.min(100,Math.round((overallPace/80)*100));
+  const rColor=readinessPct>=80?'#22c55e':readinessPct>=50?'#f59e0b':'#ef4444';
+
+  const buckets=[0,0,0,0,0,0];
+  const bLabels=['<0.5s','0.5–1s','1–1.5s','1.5–2s','2–3s','>3s'];
+  const bColors=['#22c55e','#4ade80','#f59e0b','#fb923c','#ef4444','#dc2626'];
+  allEntries.forEach(e=>{
+    const s=e.ms/1000;
+    if(s<0.5) buckets[0]++;
+    else if(s<1) buckets[1]++;
+    else if(s<1.5) buckets[2]++;
+    else if(s<2) buckets[3]++;
+    else if(s<3) buckets[4]++;
+    else buckets[5]++;
+  });
+  const maxB=Math.max(...buckets,1);
+  const maxBarAvg=Math.max(...airlineStats.map(a=>a.avg),3000);
+
+  content.innerHTML=`
+    <div class="aSection">
+      <h3>Record Readiness</h3>
+      <div id="readinessScore" style="color:${rColor}">${readinessPct}%</div>
+      <div id="readinessBar"><div id="readinessFill" style="width:${readinessPct}%;background:${rColor}"></div></div>
+      <div id="readinessLabel">
+        Overall avg: <strong>${(overallAvg/1000).toFixed(2)}s</strong> &nbsp;·&nbsp;
+        Pace: <strong style="color:${rColor}">${overallPace}/min</strong> &nbsp;·&nbsp;
+        Target: <strong>80/min (0.75s each)</strong><br>
+        ${overallPace>=80?'<strong style="color:#22c55e">You are on pace to beat the record!</strong>':
+          `Need to cut <strong>${((overallAvg-750)/1000).toFixed(2)}s</strong> per tail on average.`}
+      </div>
+    </div>
+
+    <div class="aSection">
+      <h3>Slowest Airlines — all ${airlineStats.length} practiced, ranked worst first</h3>
+      <div class="slowScroll"><div class="barChart">
+        ${airlineStats.map((a,idx)=>{
+          const pct=Math.min(100,(a.avg/maxBarAvg)*100);
+          const c=a.avg<750?'#22c55e':a.avg<1500?'#f59e0b':'#ef4444';
+          return `<div class="barRow">
+            <div class="bLabel" title="${a.name}"><span style="color:var(--muted);margin-right:4px">${idx+1}.</span>${a.name}</div>
+            <div class="bTrack"><div class="bFill" style="width:${pct}%;background:${c}"></div></div>
+            <div class="bVal" style="color:${c}">${(a.avg/1000).toFixed(1)}s</div>
+          </div>`;
+        }).join('')}
+      </div></div>
+    </div>
+
+    <div class="aSection">
+      <h3>Speed Distribution — ${allEntries.length} total identifications</h3>
+      <div id="histContainer">
+        ${buckets.map((c,i)=>{
+          const h=Math.max(2,Math.round((c/maxB)*80));
+          return `<div class="histWrap">
+            <div class="histBar" style="height:${h}px;background:${bColors[i]};width:80%;align-self:flex-end;border-radius:3px 3px 0 0;"></div>
+            <div class="histLabel">${bLabels[i]}<br><span class="histCount">${c}</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="aSection" id="sessionHistSection">
+      <h3>Session History — ${anaSessions.length} total sessions</h3>
+      <div id="sessionHistRows"></div>
+    </div>
+
+    <div style="text-align:center;padding-bottom:4px;">
+      <button id="clearDataBtn">Clear All Data</button>
+    </div>
+  `;
+  renderSessionPage();
+  document.getElementById('clearDataBtn').addEventListener('click', ()=>{
+    document.getElementById('confirmOverlay').classList.add('open');
+  });
+}
+
+function renderSessionPage(){
+  const total=anaSessions.length;
+  const pages=Math.ceil(total/ANA_PER);
+  const p=Math.max(1,Math.min(anaPage,pages));
+  anaPage=p;
+  const slice=anaSessions.slice((p-1)*ANA_PER, p*ANA_PER);
+  const rows=slice.map((s,i)=>{
+    const avg=s.entries.reduce((a,e)=>a+e.ms,0)/s.entries.length;
+    const pace=Math.round(60000/avg);
+    const d2=new Date(s.date);
+    const lbl=d2.toLocaleDateString()+' '+d2.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const paceColor=pace>=80?'#22c55e':pace>=60?'#f59e0b':'#ef4444';
+    const globalNum=anaSessions.length-((p-1)*ANA_PER+i);
+    return `<div class="sessionRow">
+      <span class="sDate">#${globalNum} &nbsp;${lbl}</span>
+      <span>${s.entries.length} tails</span>
+      <span>${(avg/1000).toFixed(2)}s avg</span>
+      <span class="sPace" style="color:${paceColor}">${pace}/min</span>
+    </div>`;
+  }).join('');
+
+  const pagination=pages>1?`<div class="anaPageRow">
+    <button class="anaPageBtn" ${p===1?'disabled':''} onclick="anaPage--;renderSessionPage()">← Prev</button>
+    <span>Page ${p} of ${pages} &nbsp;(${total} sessions)</span>
+    <button class="anaPageBtn" ${p===pages?'disabled':''} onclick="anaPage++;renderSessionPage()">Next →</button>
+  </div>`:'';
+
+  document.getElementById('sessionHistRows').innerHTML=rows+pagination;
+}
+
+// Confirmation modal
+document.getElementById('confirmCancelBtn').addEventListener('click',()=>{
+  document.getElementById('confirmOverlay').classList.remove('open');
+});
+document.getElementById('confirmOkBtn').addEventListener('click',()=>{
+  localStorage.removeItem(ZEN_KEY);
+  document.getElementById('confirmOverlay').classList.remove('open');
+  buildAnalytics();
+});
+
+document.getElementById('analyticsHomeBtn').addEventListener('click', ()=>{ analyticsFrom='startScreen'; showAnalytics(); });
+document.getElementById('closeAnalyticsBtn').addEventListener('click', ()=>showScreen(analyticsFrom||'startScreen'));
+</script>
+</body>
+</html>
