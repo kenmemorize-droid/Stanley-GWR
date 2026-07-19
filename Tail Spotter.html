@@ -559,6 +559,15 @@ document.getElementById("copyBtn").addEventListener("click", ()=>{
 document.getElementById("bankCount").textContent = PHOTOS.length + " airplane tail designs in the study bank.";
 preloadAll();
 
+// Arrow key navigation — right/down advance in both game and zen mode
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){
+    e.preventDefault();
+    if(document.getElementById('gameScreen').classList.contains('active')) handleTap();
+    else if(document.getElementById('zenScreen').classList.contains('active')) zenHandleTap();
+  }
+});
+
 /* =========================================================================
    ZEN MODE
    ========================================================================= */
